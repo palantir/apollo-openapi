@@ -1,0 +1,76 @@
+# Copyright 2023 Palantir Technologies Inc. All rights reserved.
+# Licensed under the Apache License, Version 2.0.
+openapi: 3.0.1
+info:
+  description: The public API for Apollo
+  title: Apollo API
+  version: 0.1.0
+servers:
+  - url: /api
+tags:
+  - name: NamespacesApiService
+    x-serviceName: true
+components:
+  securitySchemes:
+    BearerAuth:
+      $ref: './common.yml#/components/securitySchemes/BearerAuth'
+    OAuth2:
+      $ref: './common.yml#/components/securitySchemes/OAuth2'
+  schemas:
+    NamespaceId:
+      description: |
+        The unique identifier for a namespace. To look up your Namespace ID, please use the
+        `List namespaces` endpoint.
+      type: string
+    NamespaceGroup:
+      description: |
+        A group that has been assigned a set of permissions on a namespace
+      type: string
+    ListNamespacesResponse:
+      properties:
+        namespaces:
+          description: The list of Namespaces the user has access to.
+          items:
+            $ref: '#/components/schemas/Namespace'
+          type: array
+      type: object
+    Namespace:
+      description: Metadata about a Namespace
+      properties:
+        id:
+          $ref: "#/components/schemas/NamespaceId"
+        owners:
+          description: The list of groups with Owner permissions on the Namespace
+          items:
+            $ref: '#/components/schemas/NamespaceGroup'
+          type: array
+        editors:
+          description: The list of groups with Editor permissions on the Namespace
+          items:
+            $ref: '#/components/schemas/NamespaceGroup'
+          type: array
+        viewers:
+          description: The list of groups with Viewer permissions on the Namespace
+          items:
+            $ref: '#/components/schemas/NamespaceGroup'
+          type: array
+      required:
+        - id
+      type: object
+paths:
+  /v0/namespaces:
+    get:
+      description: Lists namespaces the user has access to
+      operationId: listNamespaces
+      security:
+        - OAuth2: [ ]
+        - BearerAuth: [ ]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListNamespacesResponse'
+          description: Success response
+      tags:
+        - NamespacesApiService

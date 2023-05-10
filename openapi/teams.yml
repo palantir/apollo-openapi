@@ -1,0 +1,14 @@
+# Copyright 2023 Palantir Technologies Inc. All rights reserved.
+# Licensed under the Apache License, Version 2.0.
+openapi: 3.0.1
+info:
+  description: The public API for Apollo
+  title: Apollo API
+  version: 0.1.0
+components:
+  schemas:
+    TeamRid:
+      description: The unique identifier for a team
+      format: rid
+      type: string
+paths: {}

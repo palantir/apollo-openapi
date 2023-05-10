@@ -1,0 +1,195 @@
+# Copyright 2023 Palantir Technologies Inc. All rights reserved.
+# Licensed under the Apache License, Version 2.0.
+openapi: 3.0.1
+info:
+  description: The public API for Apollo
+  title: Apollo API
+  version: 0.1.0
+servers:
+  - url: /api
+tags:
+  - name: EnvironmentsApiService
+    x-serviceName: true
+components:
+  securitySchemes:
+    BearerAuth:
+      $ref: './common.yml#/components/securitySchemes/BearerAuth'
+    OAuth2:
+      $ref: './common.yml#/components/securitySchemes/OAuth2'
+  schemas:
+    EnvironmentRid:
+      description: The unique resource identifier of Environment, useful for interacting with other Apollo APIs.
+      format: rid
+      type: string
+    DeploymentName:
+      description: A unique resource identifier of an Environment, entered at Environment creation time.
+      type: string
+    EnvironmentType:
+      description: The type of environment (e.g. Production)
+      type: string
+      enum: [production, staging, dev]
+    ManagementStatus:
+      description: Whether the environment is managed by Apollo or not.
+      type: string
+      enum: [ managed, unmanaged ]
+    InstallationRid:
+      description: The unique resource identifier for an Installation, useful for interacting with other Apollo APIs
+      format: rid
+      type: string
+    ListEnvironmentsResponse:
+      properties:
+        environments:
+          description: The list of Environments the user has access to.
+          items:
+            $ref: '#/components/schemas/Environment'
+          type: array
+      type: object
+    ListInstallationsResponse:
+      properties:
+        installations:
+          description: The list of Installations the user has access to within a specific Environment.
+          items:
+            $ref: '#/components/schemas/Installation'
+          type: array
+      type: object
+    Environment:
+      description: Metadata about an Environment
+      properties:
+        rid:
+          $ref: "#/components/schemas/EnvironmentRid"
+        name:
+          $ref: "#/components/schemas/DeploymentName"
+        type:
+          $ref: "#/components/schemas/EnvironmentType"
+        status:
+          $ref: "#/components/schemas/ManagementStatus"
+      required:
+        - rid
+        - name
+        - status
+      type: object
+    Installation:
+      description: A piece of software installed in an Environment
+      properties:
+        rid:
+          $ref: "#/components/schemas/InstallationRid"
+        environmentRid:
+          $ref: "#/components/schemas/EnvironmentRid"
+        apolloEntityId:
+          $ref: "./common.yml#/components/schemas/ApolloEntityId"
+        packageRid:
+          $ref: "./common.yml#/components/schemas/PackageRid"
+        productId:
+          $ref: "./common.yml#/components/schemas/ProductId"
+        releaseChannel:
+          $ref: "./common.yml#/components/schemas/ReleaseChannel"
+        ignoredDependencies:
+          description: Product dependencies that have been marked as ignored for this installation.
+          items:
+            $ref: "./common.yml#/components/schemas/ProductId"
+          type: array
+        markedForDeletion:
+          description: True if the Installation is pending deletion
+          type: boolean
+        version:
+          description: The reported version from the Apollo Agent responsible for managing this Installation
+          type: string
+      required:
+        - rid
+        - environmentRid
+        - apolloEntityId
+        - packageRid
+        - productId
+      type: object
+paths:
+  /v0/environments:
+    get:
+      description: Lists environments the user has access to
+      operationId: listEnvironments
+      security:
+        - OAuth2: [ ]
+        - BearerAuth: [ ]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvironmentsResponse'
+          description: Success response
+      tags:
+        - EnvironmentsApiService
+  /v0/environments/{environmentRid}:
+    get:
+      description: Fetches the Environment with the specified EnvironmentRid
+      operationId: getEnvironment
+      security:
+        - OAuth2: [ ]
+        - BearerAuth: [ ]
+      parameters:
+        - description: The RID of the Environment
+          in: path
+          name: environmentRid
+          required: true
+          schema:
+            $ref: "#/components/schemas/EnvironmentRid"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Environment"
+          description: Success response
+      tags:
+        - EnvironmentsApiService
+  /v0/environments/{environmentRid}/installations:
+    get:
+      description: Lists the Installations installed within the specified Environment
+      operationId: listInstallations
+      security:
+        - OAuth2: [ ]
+        - BearerAuth: [ ]
+      parameters:
+        - description: The RID of the Environment
+          in: path
+          name: environmentRid
+          required: true
+          schema:
+            $ref: "#/components/schemas/EnvironmentRid"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListInstallationsResponse"
+          description: Success response
+      tags:
+        - EnvironmentsApiService
+  /v0/environments/{environmentRid}/installations/{installationRid}:
+    get:
+      description: Fetches the specified Installation
+      operationId: getInstallation
+      security:
+        - OAuth2: [ ]
+        - BearerAuth: [ ]
+      parameters:
+        - description: The RID of the Environment
+          in: path
+          name: environmentRid
+          required: true
+          schema:
+            $ref: "#/components/schemas/EnvironmentRid"
+        - description: The RID of the Installation
+          in: path
+          name: installationRid
+          required: true
+          schema:
+            $ref: "#/components/schemas/InstallationRid"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Installation"
+          description: Success response
+      tags:
+        - EnvironmentsApiService

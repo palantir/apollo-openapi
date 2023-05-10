@@ -1,0 +1,63 @@
+# Eclipse
+*.class
+.project
+.gradle
+.classpath
+.checkstyle
+.settings
+.node
+/build/
+*/build
+*/*/build/
+examples/*/build/
+extras/*/build/
+bin
+.factorypath
+
+# SLSv2
+!*/service/bin
+**/var/log
+**/var/data
+
+# Gofigure
+**/var/conf
+**/var/security
+**/var/tmp
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Package Files #
+*.jar
+*.war
+*.ear
+
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+*.hprof
+
+# Windows git artifact
+fileeditor
+
+# Mac specific files
+.DS_Store
+
+# IntelliJ
+*.iml
+*.ipr
+*.iws
+.idea/
+out/
+
+# Eclipse/IntelliJ APT
+generated_src/
+generated_testSrc/
+generated/
+
+# Blueprint theme
+__init__.pyc
+
+# dev-env
+/gofigure.yml
+/docker-compose.yml
+/remote-dev-env.yml

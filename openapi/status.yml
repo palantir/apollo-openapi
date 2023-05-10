@@ -1,0 +1,305 @@
+# Copyright 2023 Palantir Technologies Inc. All rights reserved.
+# Licensed under the Apache License, Version 2.0.
+openapi: 3.0.1
+info:
+  description: The public API for Apollo.
+  title: Apollo API
+  version: 0.1.0
+servers:
+  - url: /api
+tags:
+  - name: StatusApiService
+    x-serviceName: true
+components:
+  securitySchemes:
+    BearerAuth:
+      $ref: './common.yml#/components/securitySchemes/BearerAuth'
+    OAuth2:
+      $ref: './common.yml#/components/securitySchemes/OAuth2'
+  schemas:
+    ContainerId:
+      type: string
+      description: The unique name for a container that runs a process
+    EntityType:
+      type: string
+      enum:
+        - HELM_CHART
+        - SERVICE
+    EnvironmentId:
+      type: string
+    HealthCheckId:
+      type: string
+      description: The unique name of a health check that is particular to a service
+    HealthCheckMessage:
+      type: string
+      description: The message associated with the current health payload
+    HealthCheckResult:
+      type: string
+      description: |
+        The result associated with the current health payload. 
+        - HEALTHY means that the service node is fully operational with no issues.
+        - REPAIRING means that the service node is operating in a degraded state, but is capable of automatically recovering. 
+          If any of the nodes in the service were to be restarted, it may result in a state transition failing.
+        - WARNING means that the service node is in a state that is trending towards an error. 
+          If no corrective action is taken, the health is expected to become an ERROR
+        - ERROR means that the service node is operationally unhealthy.
+        - TERMINAL means that the service node has entered an unrecoverable state. 
+          All nodes of the service should be stopped and no automated attempt to restart the node should be made.
+      enum:
+        - HEALTHY
+        - REPAIRING
+        - WARNING
+        - ERROR
+        - TERMINAL
+    HostId:
+      description: The unique name of the underlying (virtual or physical) worker machine that can host services.
+      type: string
+    EntityId:
+      description: The unique name of a service installation running in an apollo environment.
+      type: string
+    K8sNamespace:
+      type: string
+    ProductGroup:
+      type: string
+    ProductName:
+      type: string
+    NodeId:
+      description: |
+        The unique name of an Apollo node. A node is an installation of a service that can live on a host. 
+        This is not to be confused with a kubernetes node, which can host multiple services.
+      type: string
+    ProductVersion:
+      type: string
+    Quorum:
+      description: Describes the number of nodes / pods needed to be ready for the service to be considered healthy.
+      type: string
+      enum:
+        - UNKNOWN
+        - ANY
+        - ALL
+        - ALL_BUT_ONE
+        - SIMPLE_MAJORITY
+        - NO_GUARANTEE
+    ContainerStatus:
+      properties:
+        containerId:
+          $ref: '#/components/schemas/ContainerId'
+        checks:
+          items:
+            $ref: '#/components/schemas/HealthCheck'
+          type: array
+        liveness: 
+          type: boolean
+        readiness:
+          type: boolean
+      type: object
+      required:
+        - containerId
+        - liveness
+        - readiness
+    EntityInfo:
+      properties:
+        entityType:
+          $ref: '#/components/schemas/EntityType'
+        id:
+          $ref: '#/components/schemas/EntityId'
+        k8sNamespace:
+          $ref: '#/components/schemas/K8sNamespace'
+        productGroup:
+          $ref: '#/components/schemas/ProductGroup'
+        productName:
+          $ref: '#/components/schemas/ProductName'
+        nodesInfo:
+          items:
+            $ref: '#/components/schemas/NodeInfo'
+          type: array
+        quorum:
+          $ref: '#/components/schemas/Quorum'
+      type: object
+      required:
+        - entityType
+        - id
+        - productGroup
+        - productName
+    EntityHealth:
+      properties:
+        productGroup:
+           $ref: '#/components/schemas/ProductGroup'
+        productName:
+          $ref: '#/components/schemas/ProductName'
+        productVersion:
+          $ref: '#/components/schemas/ProductVersion'
+        nodeId:
+          $ref: '#/components/schemas/NodeId'
+        containerStatuses:
+          items:
+            $ref: '#/components/schemas/ContainerStatus'
+          type: array
+      type: object
+      required:
+        - productGroup
+        - productName
+        - productVersion
+        - nodeId
+    HealthCheckParams:
+      type: object
+    HealthCheck:
+      properties:
+        type: 
+          $ref: '#/components/schemas/HealthCheckId'
+        message:
+          $ref: '#/components/schemas/HealthCheckMessage'
+        params: 
+          $ref: '#/components/schemas/HealthCheckParams'
+        result:
+          $ref: '#/components/schemas/HealthCheckResult'
+      type: object
+      required:
+        - type
+        - message
+        - params
+        - result
+    NodeInfo:
+      properties:
+        creationTimestamp:
+          type: string
+          format: date-time
+        hostId:
+          $ref: '#/components/schemas/HostId'
+        nodeId:
+          $ref: '#/components/schemas/NodeId'
+        productVersion:
+          $ref: '#/components/schemas/ProductVersion'
+      type: object
+      required:
+        - creationTimestamp
+        - hostId
+        - nodeId
+        - productVersion
+    PutStatusEntitiesInfoRequest:
+      properties:
+        entitiesInfo:
+          items:
+            $ref: '#/components/schemas/EntityInfo'
+          type: array
+      type: object
+    PutStatusEntitiesInfoResponse:
+      type: object
+    PutStatusEntitiesHealthRequest:
+      type: object
+      properties:
+        entitiesHealth:
+          items:
+            $ref: '#/components/schemas/EntityHealth'
+          type: array
+    PutStatusEntitiesHealthResponse:
+      type: object
+paths:
+  /v0/status/environments/{environmentId}/entities/info:
+    post:
+      description: Put status entity info payloads for the environment. This should be reported on an interval of 10s.
+      operationId: putStatusEntitiesInfo
+      security:
+        - OAuth2: []
+        - BearerAuth: []
+      parameters:
+        - description: The environment id associated with the environment
+          in: path
+          name: environmentId
+          required: true
+          schema:
+            $ref: '#/components/schemas/EnvironmentId'
+          example: foo-production
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutStatusEntitiesInfoRequest'
+            example:
+              entitiesInfo:
+                - entityType: HELM_CHART
+                  id: foo
+                  productGroup: 'com.foo-group'
+                  productName: 'foo-product'
+                  k8sNamespace: default
+                  nodesInfo:
+                    - creationTimestamp: 2023-01-21T17:32:28Z
+                      hostId: foo-host-1
+                      nodeId: foo-product-0
+                      productVersion: 0.12.3
+                    - creationTimestamp: 2023-01-21T17:33:01Z
+                      hostId: foo-host-1
+                      nodeId: foo-product-1
+                      productVersion: 0.12.3
+                  quorum: ANY
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PutStatusEntitiesInfoResponse'
+              example: {}
+          description: Success response.
+      tags:
+        - StatusApiService
+  /v0/status/environments/{environmentId}/entities/health:
+    post:
+      description: Put status entity health payloads for the environment. This should be reported on an interval of 10s.
+      operationId: putStatusEntitiesHealth
+      security:
+        - OAuth2: []
+        - BearerAuth: []
+      parameters:
+        - description: The environment id associated with the environment
+          in: path
+          name: environmentId
+          required: true
+          schema:
+            $ref: '#/components/schemas/EnvironmentId'
+          example: foo-production
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutStatusEntitiesHealthRequest'
+            example:
+              entitiesHealth:
+                - productGroup: com.apollo.autodiscovery
+                  productName: postgresql
+                  productVersion: 12.1.2
+                  nodeId: postgresql-0
+                  containerStatuses:
+                    - containerId: postgresql-0-core
+                      liveness: true
+                      readiness: false
+                    - containerId: postgresql-0-sidecar
+                      liveness: true
+                      readiness: true
+                      checks:
+                        - type: DB_CONNECTION_HEALTHY
+                          message: 'Could not connect to server: Connection refused'
+                          params:
+                            port: 5432
+                          result: ERROR
+                - productGroup: com.apollo.autodiscovery
+                  productName: postgresql
+                  productVersion: 12.1.2
+                  nodeId: postgresql-1
+                  containerStatuses:
+                    - containerId: postgresql-1-core
+                      liveness: true
+                      readiness: true
+                    - containerId: postgresql-1-sidecar
+                      liveness: true
+                      readiness: true
+                      checks: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PutStatusEntitiesHealthResponse'
+              example: {}
+          description: Success response.
+      tags:
+        - StatusApiService
