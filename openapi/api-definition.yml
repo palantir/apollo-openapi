@@ -1,0 +1,1028 @@
+openapi: 3.0.1
+info:
+  description: The public API for Apollo.
+  title: Apollo API
+  version: 0.1.0
+security: []
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      bearerFormat: JWT
+      scheme: bearer
+    OAuth2:
+      type: oauth2
+      flows:
+        authorizationCode:
+          tokenUrl: /multipass/api/oauth2/token
+          authorizationUrl: /multipass/api/oauth2/authorize
+          refreshUrl: /multipass/api/oauth2/token
+          scopes:
+            apollo-api:use-api: Use API
+        clientCredentials:
+          tokenUrl: /multipass/api/oauth2/token
+          scopes:
+            apollo-api:use-api: Use API
+  schemas:
+    ProductGroup:
+      type: string
+      description: Product group for the dependent product release.
+    ProductName:
+      type: string
+      description: Product name for the dependent product release.
+    MavenCoordinate:
+      type: string
+    UpgradeStrategy:
+      type: string
+      enum:
+        - rolling
+        - shutdown
+    ProductDependency:
+      properties:
+        productId:
+          $ref: '#/components/schemas/ProductId'
+        minVersion:
+          $ref: '#/components/schemas/ApolloProductVersion'
+        maxVersion:
+          $ref: '#/components/schemas/ApolloProductVersion'
+        optional:
+          type: boolean
+      type: object
+    RecallStatus:
+      description: "An object describing the recalled state for a given product release. \nIf recalled is false, other properties will not be filled out.\n"
+      properties:
+        recalled:
+          type: boolean
+          description: "True if the release is recalled, false otherwise."
+        recalledBy:
+          type: string
+          description: The unique user identifier for the user that initiated the recall.
+        recalledAt:
+          type: string
+          format: date-time
+        reason:
+          type: string
+      type: object
+      required:
+        - recalled
+    HelmChartProductExtensions:
+      description: |
+        An object describing the helm chart product extensions for a product release.
+      properties:
+        helmChart:
+          $ref: '#/components/schemas/HelmChartReleaseLocator'
+        artifacts:
+          items:
+            $ref: '#/components/schemas/ArtifactLocator'
+          type: array
+        productDependencies:
+          items:
+            $ref: '#/components/schemas/ProductDependencyLocator'
+          type: array
+      type: object
+      required:
+        - helmChart
+    ServiceProductExtensions:
+      description: |
+        An object describing the service product extensions for a product release.
+      properties:
+        productDependencies:
+          items:
+            $ref: '#/components/schemas/ProductDependencyLocator'
+          type: array
+      type: object
+    HelmChartReleaseLocator:
+      description: |
+        An object describing the helm chart release for a product release.
+      properties:
+        helmRepositoryUrl:
+          type: string
+        helmChartName:
+          type: string
+        helmChartVersion:
+          $ref: '#/components/schemas/ApolloProductVersion'
+      required:
+        - helmRepositoryUrl
+        - helmChartName
+        - helmChartVersion
+      type: object
+    ArtifactLocator:
+      description: |
+        An object describing an OCI artifact for a product release.
+      properties:
+        artifactUrl:
+          type: string
+          description: An OCI registry URL without the url protocol.
+      required:
+        - artifactUrl
+      type: object
+    ProductDependencyLocator:
+      description: |
+        An object describing a product dependency for a product release.
+      properties:
+        productGroup:
+          $ref: '#/components/schemas/ProductGroup'
+        productName:
+          $ref: '#/components/schemas/ProductName'
+        minimumVersion:
+          $ref: '#/components/schemas/ApolloProductVersion'
+        maximumVersion:
+          $ref: '#/components/schemas/ApolloProductVersion'
+      required:
+        - productGroup
+        - productName
+        - minimumVersion
+        - maximumVersion
+      type: object
+    Release:
+      properties:
+        mavenCoordinate:
+          $ref: '#/components/schemas/MavenCoordinate'
+        releaseChannels:
+          items:
+            $ref: '#/components/schemas/ReleaseChannel'
+          type: array
+        upgradeStrategy:
+          $ref: '#/components/schemas/UpgradeStrategy'
+        recallStatus:
+          $ref: '#/components/schemas/RecallStatus'
+        productDependencies:
+          items:
+            $ref: '#/components/schemas/ProductDependency'
+          type: array
+      required:
+        - mavenCoordinate
+        - recallStatus
+      type: object
+    Product:
+      description: An Apollo Product.
+      properties:
+        id:
+          $ref: '#/components/schemas/ProductId'
+        group:
+          $ref: '#/components/schemas/GroupId'
+        maintenanceWindow:
+          $ref: '#/components/schemas/MaintenanceWindow'
+        ownerTeamRid:
+          $ref: '#/components/schemas/TeamRid'
+      required:
+        - id
+        - group
+      type: object
+    PublishServiceRequest:
+      properties:
+        extensions:
+          description: Product extensions for the service.
+          $ref: '#/components/schemas/ServiceProductExtensions'
+      type: object
+    PublishHelmChartRequest:
+      properties:
+        extensions:
+          description: Product extensions for the helm chart.
+          $ref: '#/components/schemas/HelmChartProductExtensions'
+      required:
+        - extensions
+      type: object
+    PublishServiceResponse:
+      type: object
+    PublishHelmChartResponse:
+      type: object
+    ListProductsResponse:
+      properties:
+        products:
+          description: The list of Products the user has access to.
+          items:
+            $ref: '#/components/schemas/Product'
+          type: array
+      type: object
+    ListReleasesResponse:
+      properties:
+        releases:
+          description: The list of Releases for a specific Product.
+          items:
+            $ref: '#/components/schemas/Release'
+          type: array
+      type: object
+    TimeInterval:
+      description: "A time window, comprised of a start and end time."
+      properties:
+        startTime:
+          type: string
+          format: date-time
+          description: The start time for the interval.
+        endTime:
+          type: string
+          format: date-time
+          description: The end time for the interval.
+      type: object
+    MaintenanceWindow:
+      description: A time period during which maintenance can occur.
+      properties:
+        zoneId:
+          type: string
+        name:
+          description: The name for the maintenance window.
+          type: string
+        timeIntervals:
+          items:
+            $ref: '#/components/schemas/TimeInterval'
+          type: array
+      type: object
+    ProductId:
+      description: The unique identifier for a Product.
+      type: string
+    GroupId:
+      description: A grouping of products based upon coordinate.
+      type: string
+    PackageRid:
+      description: "The unique resource identifier for a Package, useful for interacting with other Apollo APIs."
+      format: rid
+      type: string
+    ReleaseChannel:
+      type: string
+    ApolloEntityId:
+      description: "A deterministic, client creatable, identifier for an Apollo resource."
+      type: string
+    ApolloProductVersion:
+      description: An orderable semantically versioned string.
+      type: string
+    EnvironmentRid:
+      description: "The unique resource identifier of Environment, useful for interacting with other Apollo APIs."
+      format: rid
+      type: string
+    DeploymentName:
+      description: "A unique resource identifier of an Environment, entered at Environment creation time."
+      type: string
+    EnvironmentType:
+      description: The type of environment (e.g. Production).
+      type: string
+      enum:
+        - production
+        - staging
+        - dev
+    ManagementStatus:
+      description: Whether the environment is managed by Apollo or not.
+      type: string
+      enum:
+        - managed
+        - unmanaged
+    InstallationRid:
+      description: "The unique resource identifier for an Installation, useful for interacting with other Apollo APIs."
+      format: rid
+      type: string
+    ListEnvironmentsResponse:
+      properties:
+        environments:
+          description: The list of Environments the user has access to.
+          items:
+            $ref: '#/components/schemas/Environment'
+          type: array
+      type: object
+    ListInstallationsResponse:
+      properties:
+        installations:
+          description: The list of Installations the user has access to within a specific Environment.
+          items:
+            $ref: '#/components/schemas/Installation'
+          type: array
+      type: object
+    Environment:
+      description: Metadata about an Environment.
+      properties:
+        rid:
+          $ref: '#/components/schemas/EnvironmentRid'
+        name:
+          $ref: '#/components/schemas/DeploymentName'
+        environmentType:
+          $ref: '#/components/schemas/EnvironmentType'
+        status:
+          $ref: '#/components/schemas/ManagementStatus'
+      required:
+        - rid
+        - name
+        - status
+      type: object
+    Installation:
+      description: A piece of software installed in an Environment.
+      properties:
+        rid:
+          $ref: '#/components/schemas/InstallationRid'
+        environmentRid:
+          $ref: '#/components/schemas/EnvironmentRid'
+        apolloEntityId:
+          $ref: '#/components/schemas/ApolloEntityId'
+        packageRid:
+          $ref: '#/components/schemas/PackageRid'
+        productId:
+          $ref: '#/components/schemas/ProductId'
+        releaseChannel:
+          $ref: '#/components/schemas/ReleaseChannel'
+        ignoredDependencies:
+          description: Product dependencies that have been marked as ignored for this installation.
+          items:
+            $ref: '#/components/schemas/ProductId'
+          type: array
+        markedForDeletion:
+          description: True if the Installation is pending deletion.
+          type: boolean
+        version:
+          description: The reported version from the Apollo Agent responsible for managing this Installation.
+          type: string
+      required:
+        - rid
+        - environmentRid
+        - apolloEntityId
+        - packageRid
+        - productId
+      type: object
+    TeamRid:
+      description: The unique identifier for a team.
+      format: rid
+      type: string
+    ContainerId:
+      type: string
+      description: The unique name for a container that runs a process.
+    EntityType:
+      type: string
+      enum:
+        - HELM_CHART
+        - SERVICE
+    EnvironmentId:
+      type: string
+    HealthCheckId:
+      type: string
+      description: The unique name of a health check that is particular to a service.
+    HealthCheckMessage:
+      type: string
+      description: The message associated with the current health payload.
+    HealthCheckResult:
+      type: string
+      description: "The result associated with the current health payload. \n- HEALTHY means that the service node is fully operational with no issues.\n- REPAIRING means that the service node is operating in a degraded state, but is capable of automatically recovering. \n  If any of the nodes in the service were to be restarted, it may result in a state transition failing.\n- WARNING means that the service node is in a state that is trending towards an error. \n  If no corrective action is taken, the health is expected to become an ERROR.\n- ERROR means that the service node is operationally unhealthy.\n- TERMINAL means that the service node has entered an unrecoverable state. \n  All nodes of the service should be stopped and no automated attempt to restart the node should be made.\n"
+      enum:
+        - HEALTHY
+        - REPAIRING
+        - WARNING
+        - ERROR
+        - TERMINAL
+    HostId:
+      description: The unique name of the underlying (virtual or physical) worker machine that can host services.
+      type: string
+    EntityId:
+      description: The unique name of a service installation running in an apollo environment.
+      type: string
+    K8sNamespace:
+      type: string
+    NodeId:
+      description: "The unique name of an Apollo node. A node is an installation of a service that can live on a host. \nThis is not to be confused with a kubernetes node, which can host multiple services.\n"
+      type: string
+    Quorum:
+      description: Describes the number of nodes / pods needed to be ready for the service to be considered healthy.
+      type: string
+      enum:
+        - UNKNOWN
+        - ANY
+        - ALL
+        - ALL_BUT_ONE
+        - SIMPLE_MAJORITY
+        - NO_GUARANTEE
+    ContainerStatus:
+      properties:
+        containerId:
+          $ref: '#/components/schemas/ContainerId'
+        checks:
+          items:
+            $ref: '#/components/schemas/HealthCheck'
+          type: array
+        liveness:
+          type: boolean
+        readiness:
+          type: boolean
+      type: object
+      required:
+        - containerId
+        - liveness
+        - readiness
+    EntityInfo:
+      properties:
+        entityType:
+          $ref: '#/components/schemas/EntityType'
+        id:
+          $ref: '#/components/schemas/EntityId'
+        productGroup:
+          $ref: '#/components/schemas/ProductGroup'
+        productName:
+          $ref: '#/components/schemas/ProductName'
+        k8sNamespace:
+          $ref: '#/components/schemas/K8sNamespace'
+        nodesInfo:
+          items:
+            $ref: '#/components/schemas/NodeInfo'
+          type: array
+        quorum:
+          $ref: '#/components/schemas/Quorum'
+      type: object
+      required:
+        - entityType
+        - id
+        - productGroup
+        - productName
+    EntityHealth:
+      properties:
+        productGroup:
+          $ref: '#/components/schemas/ProductGroup'
+        productName:
+          $ref: '#/components/schemas/ProductName'
+        productVersion:
+          $ref: '#/components/schemas/ApolloProductVersion'
+        nodeId:
+          $ref: '#/components/schemas/NodeId'
+        containerStatuses:
+          items:
+            $ref: '#/components/schemas/ContainerStatus'
+          type: array
+      type: object
+      required:
+        - productGroup
+        - productName
+        - productVersion
+        - nodeId
+    HealthCheckParams:
+      type: object
+    HealthCheck:
+      properties:
+        id:
+          $ref: '#/components/schemas/HealthCheckId'
+        message:
+          $ref: '#/components/schemas/HealthCheckMessage'
+        params:
+          $ref: '#/components/schemas/HealthCheckParams'
+        result:
+          $ref: '#/components/schemas/HealthCheckResult'
+      type: object
+      required:
+        - id
+        - message
+        - params
+        - result
+    NodeInfo:
+      properties:
+        creationTimestamp:
+          type: string
+          format: date-time
+        hostId:
+          $ref: '#/components/schemas/HostId'
+        nodeId:
+          $ref: '#/components/schemas/NodeId'
+        productVersion:
+          $ref: '#/components/schemas/ApolloProductVersion'
+      type: object
+      required:
+        - creationTimestamp
+        - hostId
+        - nodeId
+        - productVersion
+    PutStatusEntitiesInfoRequest:
+      properties:
+        entitiesInfo:
+          items:
+            $ref: '#/components/schemas/EntityInfo'
+          type: array
+      type: object
+    PutStatusEntitiesInfoResponse:
+      type: object
+    PutStatusEntitiesHealthRequest:
+      type: object
+      properties:
+        entitiesHealth:
+          items:
+            $ref: '#/components/schemas/EntityHealth'
+          type: array
+    PutStatusEntitiesHealthResponse:
+      type: object
+    NamespaceId:
+      description: |
+        The unique identifier for a namespace. To look up your Namespace ID, please use the
+        `List namespaces` endpoint.
+      type: string
+    NamespaceGroup:
+      description: |
+        A group that has been assigned a set of permissions on a namespace.
+      type: string
+    ListNamespacesResponse:
+      properties:
+        namespaces:
+          description: The list of Namespaces the user has access to.
+          items:
+            $ref: '#/components/schemas/Namespace'
+          type: array
+      type: object
+    Namespace:
+      description: Metadata about a Namespace.
+      properties:
+        id:
+          $ref: '#/components/schemas/NamespaceId'
+        owners:
+          description: The list of groups with Owner permissions on the Namespace.
+          items:
+            $ref: '#/components/schemas/NamespaceGroup'
+          type: array
+        editors:
+          description: The list of groups with Editor permissions on the Namespace.
+          items:
+            $ref: '#/components/schemas/NamespaceGroup'
+          type: array
+        viewers:
+          description: The list of groups with Viewer permissions on the Namespace.
+          items:
+            $ref: '#/components/schemas/NamespaceGroup'
+          type: array
+      required:
+        - id
+      type: object
+    ApiUsageDenied:
+      description: You have not properly authenticated with Apollo and will be unable to leverage the APIs.
+      properties:
+        parameters:
+          type: object
+        errorCode:
+          enum:
+            - PERMISSION_DENIED
+          type: string
+        errorName:
+          type: string
+        errorInstanceId:
+          type: string
+    ReleaseNotFound:
+      description: The specified release could not be found within the Apollo Catalog.
+      properties:
+        parameters:
+          properties:
+            mavenCoordinate:
+              $ref: '#/components/schemas/MavenCoordinate'
+          required:
+            - mavenCoordinate
+          type: object
+        errorCode:
+          enum:
+            - NOT_FOUND
+          type: string
+        errorName:
+          type: string
+        errorInstanceId:
+          type: string
+    NotEnvironmentOwner:
+      description: You are not the environment owner of this Apollo environment and will be unable to leverage the APIs.
+      properties:
+        parameters:
+          properties:
+            environmentId:
+              $ref: '#/components/schemas/EnvironmentId'
+          required:
+            - environmentId
+          type: object
+        errorCode:
+          enum:
+            - PERMISSION_DENIED
+          type: string
+        errorName:
+          type: string
+        errorInstanceId:
+          type: string
+paths:
+  /api/v0/products/helmChart/{mavenCoordinate}/publish:
+    post:
+      description: Publishes an Apollo helm chart manifest.
+      operationId: publishHelmChart
+      security:
+        - OAuth2: []
+        - BearerAuth: []
+      parameters:
+        - description: The maven coordinate specified for the product release.
+          in: path
+          name: mavenCoordinate
+          required: true
+          schema:
+            $ref: '#/components/schemas/MavenCoordinate'
+          example: com.bitnami:wordpress:12.1.3
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishHelmChartRequest'
+            example:
+              extensions:
+                helmChart:
+                  helmChartName: wordpress
+                  helmChartVersion: 12.1.3
+                  helmRepositoryUrl: https://charts.bitnami.com/charts
+                artifacts:
+                  - artifactUrl: docker.io/wordpress:12.1.3
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishHelmChartResponse'
+              example: {}
+          description: Success response.
+      tags:
+        - ProductsApiService
+  /api/v0/products/service/{mavenCoordinate}/publish:
+    post:
+      description: Publishes an Apollo service manifest.
+      operationId: publishService
+      security:
+        - OAuth2: []
+        - BearerAuth: []
+      parameters:
+        - description: The maven coordinate specified for the product release.
+          in: path
+          name: mavenCoordinate
+          required: true
+          schema:
+            $ref: '#/components/schemas/MavenCoordinate'
+          example: com.bitnami:wordpress:12.1.3
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishServiceRequest'
+            example:
+              extensions:
+                productDependencies:
+                  - productGroup: com.bitnami
+                    productName: mariadb
+                    minimumVersion: 0.1.0
+                    maximumVersion: 0.3.0
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishServiceResponse'
+              example: {}
+          description: Success response.
+      tags:
+        - ProductsApiService
+  /api/v0/products:
+    get:
+      description: Lists products the user has access to.
+      operationId: listProducts
+      security:
+        - OAuth2: []
+        - BearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListProductsResponse'
+              example:
+                products:
+                  - id: com.bitnami:wordpress
+                    group: com.bitnami
+                    ownerTeamRid: ri.autopilot.main.team.123
+          description: Success response.
+      tags:
+        - ProductsApiService
+  /api/v0/products/{productId}:
+    get:
+      description: Fetches the product specified by the provided ProductID.
+      operationId: getProduct
+      security:
+        - OAuth2: []
+        - BearerAuth: []
+      parameters:
+        - description: The ProductID of the Product.
+          in: path
+          name: productId
+          required: true
+          schema:
+            $ref: '#/components/schemas/ProductId'
+          example: com.bitnami:wordpress
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+              example:
+                id: com.bitnami:wordpress
+                group: com.bitnami
+                ownerTeamRid: ri.autopilot.main.team.123
+          description: Success response.
+      tags:
+        - ProductsApiService
+  /api/v0/products/{productId}/releases:
+    get:
+      description: Lists releases for the Product specified by the provided ProductID.
+      operationId: listReleases
+      security:
+        - OAuth2: []
+        - BearerAuth: []
+      parameters:
+        - description: The ProductID of the Product.
+          in: path
+          name: productId
+          required: true
+          schema:
+            $ref: '#/components/schemas/ProductId'
+          example: com.bitnami:wordpress
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListReleasesResponse'
+              example:
+                releases:
+                  - mavenCoordinate: com.bitnami:wordpress:12.1.3
+                    releaseChannels:
+                      - DEV
+                      - RELEASE
+                      - RELEASE_CANDIDATE
+                    upgradeStrategy: SHUTDOWN
+                    recallStatus:
+                      recalled: false
+                    productDependencies: []
+          description: Success response.
+      tags:
+        - ProductsApiService
+  /api/v0/products/{productId}/releases/{productVersion}:
+    get:
+      description: Fetches the release for the specified ProductID and Maven Coordinate.
+      operationId: getRelease
+      security:
+        - OAuth2: []
+        - BearerAuth: []
+      parameters:
+        - description: The ProductID of the Product.
+          in: path
+          name: productId
+          required: true
+          schema:
+            $ref: '#/components/schemas/ProductId'
+          example: com.bitnami:wordpress
+        - description: The version number for the Release.
+          in: path
+          name: productVersion
+          required: true
+          schema:
+            $ref: '#/components/schemas/ApolloProductVersion'
+          example: 12.1.3
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Release'
+              example:
+                mavenCoordinate: com.bitnami:wordpress:12.1.3
+                releaseChannels:
+                  - DEV
+                  - RELEASE
+                  - RELEASE_CANDIDATE
+                upgradeStrategy: SHUTDOWN
+                recallStatus:
+                  recalled: false
+                productDependencies: []
+          description: Success response.
+      tags:
+        - ProductsApiService
+  /api/v0/environments:
+    get:
+      description: Lists environments the user has access to.
+      operationId: listEnvironments
+      security:
+        - OAuth2: []
+        - BearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEnvironmentsResponse'
+              example:
+                environments:
+                  - rid: ri.apollo.main.environment.123
+                    name: apollo-environment-demo
+                    environmentType: PRODUCTION
+                    status: MANAGED
+          description: Success response.
+      tags:
+        - EnvironmentsApiService
+  /api/v0/environments/{environmentRid}:
+    get:
+      description: Fetches the Environment with the specified EnvironmentRid.
+      operationId: getEnvironment
+      security:
+        - OAuth2: []
+        - BearerAuth: []
+      parameters:
+        - description: The RID of the Environment.
+          in: path
+          name: environmentRid
+          required: true
+          schema:
+            $ref: '#/components/schemas/EnvironmentRid'
+          example: ri.apollo.main.environment.123
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Environment'
+              example:
+                rid: ri.apollo.main.environment.123
+                name: apollo-environment-demo
+                environmentType: PRODUCTION
+                status: MANAGED
+          description: Success response.
+      tags:
+        - EnvironmentsApiService
+  /api/v0/environments/{environmentRid}/installations:
+    get:
+      description: Lists the Installations installed within the specified Environment.
+      operationId: listInstallations
+      security:
+        - OAuth2: []
+        - BearerAuth: []
+      parameters:
+        - description: The RID of the Environment.
+          in: path
+          name: environmentRid
+          required: true
+          schema:
+            $ref: '#/components/schemas/EnvironmentRid'
+          example: ri.apollo.main.environment.123
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListInstallationsResponse'
+              example:
+                installations:
+                  - rid: ri.apollo.main.installation.123
+                    environmentRid: ri.apollo.main.environment.123
+                    apolloEntityId: aeid:apollo-environment-demo:helm-chart:wordpress
+                    packageRid: ri.apollo.main.package.123
+                    productId: com.bitnami:wordpress
+                    releaseChannel: RELEASE
+                    ignoredDependencies: []
+          description: Success response.
+      tags:
+        - EnvironmentsApiService
+  /api/v0/environments/{environmentRid}/installations/{installationRid}:
+    get:
+      description: Fetches the specified Installation.
+      operationId: getInstallation
+      security:
+        - OAuth2: []
+        - BearerAuth: []
+      parameters:
+        - description: The RID of the Environment.
+          in: path
+          name: environmentRid
+          required: true
+          schema:
+            $ref: '#/components/schemas/EnvironmentRid'
+          example: ri.apollo.main.environment.123
+        - description: The RID of the Installation.
+          in: path
+          name: installationRid
+          required: true
+          schema:
+            $ref: '#/components/schemas/InstallationRid'
+          example: ri.apollo.main.installation.123
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Installation'
+              example:
+                rid: ri.apollo.main.installation.123
+                environmentRid: ri.apollo.main.environment.123
+                apolloEntityId: aeid:apollo-environment-demo:helm-chart:wordpress
+                packageRid: ri.apollo.main.package.123
+                productId: com.bitnami:wordpress
+                releaseChannel: RELEASE
+                ignoredDependencies: []
+          description: Success response.
+      tags:
+        - EnvironmentsApiService
+  /api/v0/status/environments/{environmentId}/entities/info:
+    post:
+      description: Put status entity info payloads for the environment. This should be reported on an interval of 10s.
+      operationId: putStatusEntitiesInfo
+      security:
+        - OAuth2: []
+        - BearerAuth: []
+      parameters:
+        - description: The environment id associated with the environment.
+          in: path
+          name: environmentId
+          required: true
+          schema:
+            $ref: '#/components/schemas/EnvironmentId'
+          example: apollo-environment-demo
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutStatusEntitiesInfoRequest'
+            example:
+              entitiesInfo:
+                - entityType: HELM_CHART
+                  id: my-wordpress
+                  productGroup: com.bitnami
+                  productName: wordpress
+                  k8sNamespace: default
+                  nodesInfo:
+                    - creationTimestamp: 2023-01-21T17:32:28Z
+                      hostId: my-host
+                      nodeId: my-node
+                      productVersion: 12.1.3
+                  quorum: ANY
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PutStatusEntitiesInfoResponse'
+              example: {}
+          description: Success response.
+      tags:
+        - StatusApiService
+  /api/v0/status/environments/{environmentId}/entities/health:
+    post:
+      description: Put status entity health payloads for the environment. This should be reported on an interval of 10s.
+      operationId: putStatusEntitiesHealth
+      security:
+        - OAuth2: []
+        - BearerAuth: []
+      parameters:
+        - description: The environment id associated with the environment.
+          in: path
+          name: environmentId
+          required: true
+          schema:
+            $ref: '#/components/schemas/EnvironmentId'
+          example: apollo-environment-demo
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutStatusEntitiesHealthRequest'
+            example:
+              entitiesHealth:
+                - productGroup: com.bitnami
+                  productName: wordpress
+                  productVersion: 12.1.3
+                  nodeId: my-node
+                  containerStatuses:
+                    - containerId: wordpress-mariadb-0
+                      liveness: true
+                      readiness: true
+                    - containerId: wordpress-wordpress
+                      liveness: true
+                      readiness: true
+                      checks:
+                        - id: DB_CONNECTION_HEALTHY
+                          message: "Could not connect to server: Connection refused"
+                          params:
+                            port: 5432
+                          result: ERROR
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PutStatusEntitiesHealthResponse'
+              example: {}
+          description: Success response.
+      tags:
+        - StatusApiService
+  /api/v0/namespaces:
+    get:
+      description: Lists namespaces the user has access to.
+      operationId: listNamespaces
+      security:
+        - OAuth2: []
+        - BearerAuth: []
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListNamespacesResponse'
+              example:
+                namespaces:
+                  - id: namespace-demo
+                    owners: []
+                    editors: []
+                    viewers: []
+          description: Success response.
+      tags:
+        - NamespacesApiService
